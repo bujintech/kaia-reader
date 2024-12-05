@@ -22,6 +22,7 @@ export async function saveBlockByNumber(blockNumber: number) {
         GS2SK: `BLOCK#${blockData.blockNumber}`,
 
         RESULT: blockData.raw,
+        TIMESTAMP: blockData.timestamp / 1000,
         CHAIN: "KAIA",
     }
 
@@ -39,6 +40,7 @@ export async function saveBlockByNumber(blockNumber: number) {
         GS3SK: `TX#${tx.blockNumber}#${tx.txIndex}`,
 
         RESULT: tx.raw,
+        TIMESTAMP: blockData.timestamp / 1000,
         CHAIN: "KAIA",
     }));
 
