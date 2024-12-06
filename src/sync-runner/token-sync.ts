@@ -33,7 +33,7 @@ export async function saveTokenInfo(contractAddress: string, tokenType?: TokenTy
     if (tokenInfoMap.has(contractAddress) && Date.now() - tokenInfoMap.get(contractAddress)!!.cacheTime < 3600000) {
         const cache = tokenInfoMap.get(contractAddress)!!;
         tokenInfo = cache.tokenInfo;
-        console.log(chalk.blueBright("Using cache for"), chalk.yellowBright(contractAddress), chalk.blueBright('type:'), tokenInfo.tokenType);
+        // console.log(chalk.blueBright("Using cache for"), chalk.yellowBright(contractAddress), chalk.blueBright('type:'), chalk.magentaBright(tokenInfo.tokenType));
         useCache = true;
     } else {
         tokenInfo = await getTokenInfo(contractAddress, tokenType);
@@ -46,7 +46,8 @@ export async function saveTokenInfo(contractAddress: string, tokenType?: TokenTy
     }
     if (!useCache && tokenInfo) {
         // csvWriter.writeRecords([tokenInfo]);
-        writeSingle({
+        console.log(chalk.blueBright("Saving token info: "), chalk.yellowBright(tokenInfo.contractAddress));
+        await writeSingle({
             PK: tokenInfo.contractAddress,
             SK: `TOKEN#${tokenInfo.tokenType}#${tokenInfo.contractAddress}`,
             TIMESTAMP: tokenInfo.timestamp,
@@ -54,6 +55,7 @@ export async function saveTokenInfo(contractAddress: string, tokenType?: TokenTy
             DECIMAL: tokenInfo.decimals,
             SYMBOL: tokenInfo.symbol,
         })
+        console.log(chalk.greenBright("Finished saving token info of %s..."), contractAddress);
     }
     return tokenInfo;
 }

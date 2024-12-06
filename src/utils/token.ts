@@ -63,8 +63,8 @@ export async function getTokenInfo(contractAddress: string, tokenType?: TokenTyp
         if (!tokenType) {
             tokenType = await getTokenType(contractAddress);
         }
-        console.log(chalk.blueBright("Getting token info for"), chalk.yellowBright(contractAddress),
-            chalk.blueBright('type:'), chalk.magenta(tokenType));
+        // console.log(chalk.blueBright("Getting token info for"), chalk.yellowBright(contractAddress),
+        //     chalk.blueBright('type:'), chalk.magenta(tokenType));
         if (tokenType === TokenType.ERC20) {
             const contract = new Contract(contractAddress, Erc20Abi, provider);
             const totalSupply = await contract.totalSupply();
@@ -112,4 +112,3 @@ export async function getTokenInfo(contractAddress: string, tokenType?: TokenTyp
         throw error;
     }
 }
-

@@ -13,20 +13,28 @@ getLatestBlock()
         const dbLastBlock = await getDbLastBlock();
 
         let currentBlock = Math.max(startBlock, dbLastBlock + 1);
+        let syncInterval = 100;
 
         console.log(chalk.magentaBright("Start reading from block: "), currentBlock);
 
         while (true) {
+            const startTime = Date.now();
             console.log(chalk.blueBright("Saving block: "), currentBlock);
             // Saving block and tx
             await saveBlockByNumber(currentBlock);
             // Saving transfer logs and tokens
-            await saveTransferLogsByNumber(currentBlock, { showLog: false });
+            const { slow } = await saveTransferLogsByNumber(currentBlock, { showLog: false });
             // Update latest updated block number
             await setDbLastBlock(currentBlock);
-            console.log(chalk.blueBright("Finished saving block: "), currentBlock);
+            const timeCost = Date.now() - startTime;
+            console.log(chalk.blueBright("Finished saving block "), currentBlock, "Time cost:", timeCost > 1000 ? chalk.redBright(timeCost) : chalk.greenBright(timeCost), "ms");
             console.log();
             currentBlock++;
-            await new Promise(resolve => setTimeout(resolve, 100));
+            if (slow) {
+                syncInterval -= Math.max(0, syncInterval - 50)
+            } else {
+                syncInterval += Math.min(1000, syncInterval + 50)
+            }
+            await new Promise(resolve => setTimeout(resolve, syncInterval));
         }
     })

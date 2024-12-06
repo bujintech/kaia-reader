@@ -6,6 +6,8 @@ import { setDbLastBlock, writeBatch } from "../utils/db";
 import { gzipSync } from 'zlib';
 import chalk from "chalk";
 import { saveTokenInfo } from "./token-sync";
+import { NumberValue } from "@aws-sdk/lib-dynamodb";
+import { parseBigInt } from "../utils/number-utils";
 
 export enum TokenType {
     ERC20 = "ERC20",
@@ -34,14 +36,9 @@ export interface TokenTransferLog {
     amount?: bigint;
     topic: TransferTopics;
     transferType: TransferType;
-    tokenId?: number;
+    tokenId?: bigint;
     timestamp: number;
     tokenName?: string;
-}
-
-export interface NFTTransferLog extends TokenTransferLog {
-    amount: undefined;
-    tokenType: TokenType.ERC1155 | TokenType.ERC721;
 }
 
 interface BlockLog {
@@ -69,19 +66,31 @@ function getTransferType(topic: string): TransferType {
     }
 }
 
-async function parseTransferBatchData(logData: string): Promise<{ paramIndex: number, tokenId: number, amount: bigint }[]> {
-    const data = logData.substring(2);
-    const dataNumbers = [];
+async function parseTransferBatchData(logData: string): Promise<{
+    paramIndex: number,
+    tokenId: bigint,
+    amount: bigint
+}[]> {
+    const data = logData.substring(2); // Remove 0x
+    const dataNumbers: number[] = [];
+    const bigInts: bigint[] = [];
+    let tokenAmount = 0;
     for (let i = 0; i < data.length; i += 64) {
-        const nextNumber = parseInt(data.substring(i, i + 64), 16);
+        const numberStr = `0x${data.substring(i, i + 64)}`;
+        if (i === 2) {
+            tokenAmount = parseInt(numberStr, 16);
+        }
+
+        const nextNumber = parseInt(numberStr);
         if (nextNumber === Infinity) {
             console.log(data.substring(i, i + 64));
         }
         dataNumbers.push(nextNumber);
+        bigInts.push(BigInt(`0x${numberStr}`)); // Add 0x prefix for each number
     }
 
-    const tokenIds = dataNumbers.slice(3, 3 + dataNumbers[2]);
-    const amounts = dataNumbers.slice(3 + dataNumbers[2] + 1, dataNumbers.length);
+    const tokenIds = bigInts.slice(3, 3 + tokenAmount);
+    const amounts = bigInts.slice(3 + tokenAmount + 1, bigInts.length);
     return tokenIds.map((tokenId, index) => ({
         paramIndex: index,
         tokenId,
@@ -161,7 +170,15 @@ async function getTransferLogs(fromBlockNumber: number, {
             console.log(chalk.redBright("Unknown token type: "), log.address);
         }
         const tokenInfo = await saveTokenInfo(log.address);
-        let data = [] as { paramIndex: number, from: string, to: string, tokenId?: number, amount: bigint, topic: TransferTopics, name: string | undefined }[];
+        let data: {
+            paramIndex: number,
+            from: string,
+            to: string,
+            tokenId?: bigint,
+            amount: bigint,
+            topic: TransferTopics,
+            tokenName: string | undefined
+        }[] = [];
 
         switch (log.topics[0]) {
             case TransferTopics.Transfer: {
@@ -175,20 +192,20 @@ async function getTransferLogs(fromBlockNumber: number, {
                         to,
                         amount: 1n,
                         topic: TransferTopics.Transfer,
-                        tokenId: parseInt(tokenId, 16),
-                        name: tokenInfo?.name
+                        tokenId: BigInt(tokenId),
+                        tokenName: tokenInfo?.name
                     });
                 } else {
                     // event Transfer(address indexed _from, address indexed _to, uint256 _value)
                     const [, from, to] = log.topics;
-                    const amount = log.data === '0x' ? 1n : BigInt(parseInt(log.data, 16));
+                    const amount = log.data === '0x' ? 1n : parseBigInt(log.data);
                     data.push({
                         paramIndex: 0,
                         from,
                         to,
                         amount,
                         topic: TransferTopics.Transfer,
-                        name: tokenInfo?.name
+                        tokenName: tokenInfo?.name
                     });
                 }
                 break;
@@ -196,8 +213,8 @@ async function getTransferLogs(fromBlockNumber: number, {
             case TransferTopics.TransferSingle: {
                 counterTransferSingle++;
                 const [, , from, to] = log.topics;
-                const tokenId = parseInt(log.data.substring(2, 66), 16);
-                const amount = BigInt(log.data.substring(66).startsWith("0x") ? log.data.substring(66) : `0x${log.data.substring(66)}`);
+                const tokenId = parseBigInt(log.data.substring(2, 66));
+                const amount = parseBigInt(log.data.substring(66));
                 data.push({
                     paramIndex: 0,
                     tokenId,
@@ -205,7 +222,7 @@ async function getTransferLogs(fromBlockNumber: number, {
                     from,
                     to,
                     topic: TransferTopics.TransferSingle,
-                    name: tokenInfo?.name
+                    tokenName: tokenInfo?.name
                 });
                 break;
             }
@@ -218,7 +235,7 @@ async function getTransferLogs(fromBlockNumber: number, {
                     from,
                     to,
                     topic: TransferTopics.TransferBatch,
-                    name: tokenInfo?.name
+                    tokenName: tokenInfo?.name
                 })));
                 break;
             }
@@ -281,17 +298,6 @@ const logTransfer = (x: TokenTransferLog) => {
     console.log(" ", " ", "Amount:", chalk.gray(x.amount));
 }
 
-declare global {
-    interface BigInt {
-        toJSON(): string | number;
-    }
-}
-
-BigInt.prototype.toJSON = function () {
-    const int = Number.parseInt(this.toString());
-    return int ?? this.toString();
-};
-
 async function saveTransferLogs(logs: TokenTransferLog[]) {
     const data = logs.map(x => {
         switch (x.tokenType) {
@@ -308,7 +314,9 @@ async function saveTransferLogs(logs: TokenTransferLog[]) {
                     GS3SK: sk,
                     GS4PK: x.contractAddress,
                     GS4SK: sk,
-                    RESULT: gzipSync(JSON.stringify(x)),
+                    RESULT: gzipSync(JSON.stringify(x, (_, v) =>
+                        typeof v === "bigint" ? v.toString() : v,
+                    )),
                     CHAIN: 'KAIA',
                     METHOD: TransferTopics[x.topic as unknown as keyof typeof TransferTopics],
                     TIMESTAMP: x.timestamp,
@@ -316,7 +324,7 @@ async function saveTransferLogs(logs: TokenTransferLog[]) {
                     TYPE: x.tokenType,
                     AMOUNT: x.amount,
                     TOKEN_ADDRESS: x.contractAddress,
-                    NFTID: x.tokenId,
+                    NFTID: x.tokenId ? NumberValue.from(x.tokenId.toLocaleString('fullwide', { useGrouping: false })) : undefined,
                 }
             }
             default: {
@@ -332,7 +340,9 @@ async function saveTransferLogs(logs: TokenTransferLog[]) {
                     GS3SK: sk,
                     GS4PK: x.contractAddress,
                     GS4SK: sk,
-                    RESULT: gzipSync(JSON.stringify(x)),
+                    RESULT: gzipSync(JSON.stringify(x, (_, v) =>
+                        typeof v === "bigint" ? v.toString() : v,
+                    )),
                     CHAIN: 'KAIA',
                     METHOD: TransferTopics[x.topic as unknown as keyof typeof TransferTopics],
                     TIMESTAMP: x.timestamp,
@@ -340,7 +350,7 @@ async function saveTransferLogs(logs: TokenTransferLog[]) {
                     TYPE: x.tokenType,
                     AMOUNT: x.amount,
                     TOKEN_ADDRESS: x.contractAddress,
-                    NFTID: x.tokenId,
+                    NFTID: x.tokenId?.toLocaleString('fullwide', { useGrouping: false }),
                 }
             }
         }
@@ -358,26 +368,35 @@ interface SaveTransferLogOption {
     showLog?: boolean;
 }
 
-export async function saveTransferLogsByNumber(blockNumber: number, options: SaveTransferLogOption = {}) {
+let lastTimeDiff = Infinity;
+
+export async function saveTransferLogsByNumber(blockNumber: number, options: SaveTransferLogOption = {}): Promise<{
+    slow: boolean;
+}> {
     const logs = await getTransferLogs(blockNumber, { logDetail: options.showLog });
     try {
         if (logs.length === 0) {
-            console.log(chalk.yellowBright("No logs found for block number: "), blockNumber, "Skipping...");
-            return;
+            console.log(chalk.yellowBright(`No logs found for block number: ${blockNumber}, Skipping...`));
+            return { slow: false };
         }
 
         const chunkSize = 25;
         let chunkIndex = 1;
         for (let i = 0; i < logs.length; i += chunkSize) {
             console.log("Writing transfer logs to DB, block:", [...new Set(logs.map(x => x.blockNumber))], "Chunk", `${chunkIndex++}/${Math.ceil(logs.length / chunkSize)}`, "...");
+            const startTime = Date.now();
             await saveTransferLogs(logs.slice(i, i + chunkSize));
-            console.log(chalk.greenBright("Done ..."))
+            console.log(chalk.green("Done ..."), "Time cost:", Date.now() - startTime, "ms");
         }
         console.log(`Saved ${logs.length} transfer logs for block number: ${blockNumber}`);
         console.log("Block time:", chalk.magentaBright(logs[0] && new Date(logs[0].timestamp * 1000).toLocaleString("zh-CN")));
         console.log("Log time:", chalk.magentaBright(new Date().toLocaleString("zh-CN")));
-        console.log("Time diff:", chalk.magentaBright((new Date().getTime() - logs[0].timestamp * 1000) / 1000), "s");
+        const timeDiff = (new Date().getTime() - logs[0].timestamp * 1000) / 1000;
+        const slow = timeDiff > lastTimeDiff;
+        console.log("Time diff to latest block:", timeDiff < lastTimeDiff ? chalk.greenBright(timeDiff) : chalk.redBright(timeDiff), "s");
+        lastTimeDiff = timeDiff;
         await setDbLastBlock(blockNumber);
+        return { slow }
     } catch (e) {
         throw e;
     }
