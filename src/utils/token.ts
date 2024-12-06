@@ -37,16 +37,13 @@ export async function getTokenType(contractAddress: string): Promise<TokenType> 
         let callingMethod = '';
         try {
             const contract = new Contract(contractAddress, Erc20Abi, provider);
-            callingMethod = 'totalSupply';
-            await contract.totalSupply();
-            callingMethod = 'name';
-            await contract.name();
-            callingMethod = 'symbol';
-            await contract.symbol();
-            callingMethod = 'decimals';
-            await contract.decimals();
-            callingMethod = 'balanceOf';
-            await contract.balanceOf("0x616f29226c9a1502825f9b3d3ce3544df9c1c762");
+            await Promise.all([
+                contract.totalSupply(),
+                contract.name(),
+                contract.symbol(),
+                contract.decimals(),
+                contract.balanceOf("0x616f29226c9a1502825f9b3d3ce3544df9c1c762")
+            ]);
             tokenType = TokenType.ERC20;
         } catch (err) {
             console.error(chalk.redBright("Error getting token type for"), chalk.yellowBright(contractAddress), chalk.blueBright('method:'), callingMethod);
@@ -67,10 +64,12 @@ export async function getTokenInfo(contractAddress: string, tokenType?: TokenTyp
         //     chalk.blueBright('type:'), chalk.magenta(tokenType));
         if (tokenType === TokenType.ERC20) {
             const contract = new Contract(contractAddress, Erc20Abi, provider);
-            const totalSupply = await contract.totalSupply();
-            const name = await contract.name();
-            const symbol = await contract.symbol();
-            const decimals = await contract.decimals();
+            const [totalSupply, name, symbol, decimals] = await Promise.all([
+                contract.totalSupply(),
+                contract.name(),
+                contract.symbol(),
+                contract.decimals(),
+            ]);
 
             return {
                 contractAddress,
@@ -89,13 +88,17 @@ export async function getTokenInfo(contractAddress: string, tokenType?: TokenTyp
             } catch (err) {
                 console.error(chalk.redBright("Error getting totalSupply for ERC721"), chalk.yellowBright(contractAddress));
             }
+            const [name, symbol] = await Promise.all([
+                contract.name(),
+                contract.symbol(),
+            ]);
             return {
                 contractAddress,
                 timestamp: Date.now(),
                 tokenType,
                 totalSupply,
-                name: await contract.name(),
-                symbol: await contract.symbol(),
+                name,
+                symbol,
             };
         } else if (tokenType === TokenType.ERC1155 || tokenType === TokenType.KIP37) {
             // https://kips.kaia.io/KIPs/kip-37

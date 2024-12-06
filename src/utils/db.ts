@@ -1,5 +1,6 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, BatchWriteCommand, GetCommand, PutCommand, GetCommandInput, GetCommandOutput } from "@aws-sdk/lib-dynamodb";
+import chalk from "chalk";
 
 const { TABLE_NAME, DB_REGION, ACCESS_KEY_ID, SSECRET_ACCESS_KEY } = process.env;
 
@@ -59,7 +60,10 @@ export async function setDbLastBlock(blockNumber: number) {
         },
     });
 
+    const startTime = Date.now();
     await docClient.send(command);
+    const timeCost = Date.now() - startTime;
+    console.log(chalk.blueBright("Setting db last block... Time cost:"), chalk.yellowBright(timeCost), chalk.blueBright("ms"));
 }
 
 export async function getDbLastBlock() {

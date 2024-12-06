@@ -128,7 +128,6 @@ async function getTransferLogs(fromBlockNumber: number, {
     const allLogs: BlockLog[] = [];
 
     while (true) {
-        console.log(`[RPC] Calling eth_getLogs RPC for: ${fromBlockNumber}`);
         const res = await fetch(BASE_NODE_RPC, {
             method: 'POST',
             headers: {
@@ -364,15 +363,9 @@ async function saveTransferLogs(logs: TokenTransferLog[]) {
     }
 }
 
-interface SaveTransferLogOption {
-    showLog?: boolean;
-}
-
 let lastTimeDiff = Infinity;
 
-export async function saveTransferLogsByNumber(blockNumber: number, options: SaveTransferLogOption = {}): Promise<{
-    slow: boolean;
-}> {
+export async function saveTransferLogsByNumber(blockNumber: number, options: { showLog?: boolean } = {}): Promise<{ slow: boolean }> {
     const logs = await getTransferLogs(blockNumber, { logDetail: options.showLog });
     try {
         if (logs.length === 0) {
@@ -386,16 +379,16 @@ export async function saveTransferLogsByNumber(blockNumber: number, options: Sav
             console.log("Writing transfer logs to DB, block:", [...new Set(logs.map(x => x.blockNumber))], "Chunk", `${chunkIndex++}/${Math.ceil(logs.length / chunkSize)}`, "...");
             const startTime = Date.now();
             await saveTransferLogs(logs.slice(i, i + chunkSize));
-            console.log(chalk.green("Done ..."), "Time cost:", Date.now() - startTime, "ms");
+            const timeCost = Date.now() - startTime;
+            console.log(chalk.green("Finished saving transfer logs... DB time cost:"), chalk.yellowBright(timeCost), chalk.green("ms"));
         }
         console.log(`Saved ${logs.length} transfer logs for block number: ${blockNumber}`);
-        console.log("Block time:", chalk.magentaBright(logs[0] && new Date(logs[0].timestamp * 1000).toLocaleString("zh-CN")));
+        console.log("Latest block time:", chalk.magentaBright(logs[0] && new Date(logs[0].timestamp * 1000).toLocaleString("zh-CN")));
         console.log("Log time:", chalk.magentaBright(new Date().toLocaleString("zh-CN")));
         const timeDiff = (new Date().getTime() - logs[0].timestamp * 1000) / 1000;
         const slow = timeDiff > lastTimeDiff;
         console.log("Time diff to latest block:", timeDiff < lastTimeDiff ? chalk.greenBright(timeDiff) : chalk.redBright(timeDiff), "s");
         lastTimeDiff = timeDiff;
-        await setDbLastBlock(blockNumber);
         return { slow }
     } catch (e) {
         throw e;

@@ -19,7 +19,7 @@ getLatestBlock()
 
         while (true) {
             const startTime = Date.now();
-            console.log(chalk.blueBright("Saving block: "), currentBlock);
+            console.log(chalk.blue("Saving block:"), currentBlock);
             // Saving block and tx
             await saveBlockByNumber(currentBlock);
             // Saving transfer logs and tokens
@@ -27,7 +27,11 @@ getLatestBlock()
             // Update latest updated block number
             await setDbLastBlock(currentBlock);
             const timeCost = Date.now() - startTime;
-            console.log(chalk.blueBright("Finished saving block "), currentBlock, "Time cost:", timeCost > 1000 ? chalk.redBright(timeCost) : chalk.greenBright(timeCost), "ms");
+            console.log(chalk.blueBright("Finished saving block"),
+                currentBlock,
+                chalk.blueBright("Time cost:"),
+                timeCost > 1000 ? chalk.redBright(timeCost) : chalk.greenBright(timeCost),
+                chalk.blueBright("ms"));
             console.log();
             currentBlock++;
             if (slow) {
