@@ -3,7 +3,7 @@ import { DynamoDBDocumentClient, BatchWriteCommand, GetCommand, PutCommand, GetC
 import chalk from "chalk";
 import { gzipSync } from "zlib";
 
-const { TABLE_NAME, DB_REGION, ACCESS_KEY_ID, SSECRET_ACCESS_KEY } = process.env;
+export const { TABLE_NAME, DB_REGION, ACCESS_KEY_ID, SSECRET_ACCESS_KEY } = process.env;
 
 if (!TABLE_NAME || !DB_REGION || !ACCESS_KEY_ID || !SSECRET_ACCESS_KEY) {
     throw new Error("Missing environment variables");
