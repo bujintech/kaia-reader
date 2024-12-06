@@ -1,5 +1,5 @@
 import { getBlockByNumber } from "../utils/rpc";
-import { writeBatch } from "../utils/db";
+import { compressData, writeBatch } from "../utils/db";
 import chalk from "chalk";
 
 export async function getTransactions(blockNumber: number) {
@@ -21,8 +21,12 @@ export async function saveBlockByNumber(blockNumber: number) {
         GS2PK: blockData.miner,
         GS2SK: `BLOCK#${blockData.blockNumber}`,
 
-        RESULT: blockData.raw,
+        RESULT: compressData({
+            ...blockData.raw,
+            transactionsTotal: blockData.transactions.length
+        }),
         TIMESTAMP: blockData.timestamp / 1000,
+        TOTALTX: blockData.transactions.length,
         CHAIN: "KAIA",
     }
 
