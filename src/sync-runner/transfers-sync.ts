@@ -1,21 +1,12 @@
-import { ERC20_LOG_TRANSFER } from "../specifications/erc20";
 import { BASE_NODE_RPC } from "../configs";
-import { TransferTopics } from "../specifications/nft";
+import { TransferTopics, ERC20_LOG_TRANSFER, TokenType } from "../specifications";
 import { getBlockTimestamp, getTokenType } from "../utils/token";
-import { setDbLastBlock, writeBatch } from "../utils/db";
+import { writeBatch } from "../utils/db";
 import { gzipSync } from 'zlib';
 import chalk from "chalk";
 import { saveTokenInfo } from "./token-sync";
 import { NumberValue } from "@aws-sdk/lib-dynamodb";
 import { parseBigInt } from "../utils/number-utils";
-
-export enum TokenType {
-    ERC20 = "ERC20",
-    KIP37 = "KIP37",
-    ERC721 = "ERC721",
-    ERC1155 = "ERC1155",
-    UNKNOWN = "UNKNOWN",
-}
 
 export enum TransferType {
     Transfer = "Transfer",
@@ -86,7 +77,7 @@ async function parseTransferBatchData(logData: string): Promise<{
             console.log(data.substring(i, i + 64));
         }
         dataNumbers.push(nextNumber);
-        bigInts.push(BigInt(`0x${numberStr}`)); // Add 0x prefix for each number
+        bigInts.push(parseBigInt(numberStr)); // Add 0x prefix for each number
     }
 
     const tokenIds = bigInts.slice(3, 3 + tokenAmount);
@@ -366,7 +357,10 @@ async function saveTransferLogs(logs: TokenTransferLog[]) {
 let lastTimeDiff = Infinity;
 
 export async function saveTransferLogsByNumber(blockNumber: number, options: { showLog?: boolean } = {}): Promise<{ slow: boolean }> {
+    const startTime = Date.now();
     const logs = await getTransferLogs(blockNumber, { logDetail: options.showLog });
+    const timeCost = Date.now() - startTime;
+    console.log(chalk.blueBright("Read transfer logs... Time cost:"), chalk.yellowBright(timeCost), chalk.blueBright("ms"));
     try {
         if (logs.length === 0) {
             console.log(chalk.yellowBright(`No logs found for block number: ${blockNumber}, Skipping...`));

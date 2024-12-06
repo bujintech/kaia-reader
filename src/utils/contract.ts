@@ -1,6 +1,6 @@
 import { Contract } from "ethers";
 import { JsonRpcProvider } from '@kaiachain/ethers-ext/v6'
-import { BASE_NODE_RPC } from './configs';
+import { BASE_NODE_RPC } from '../configs';
 
 export const provider = new JsonRpcProvider(BASE_NODE_RPC);
 
@@ -25,6 +25,43 @@ const ERC165Abi = [
         type: "function",
     },
 ];
+
+export async function isErc20(contractAddress: string) {
+    try {
+        const res = await fetch(BASE_NODE_RPC, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                jsonrpc: "2.0",
+                method: "eth_getCode",
+                params: [contractAddress, "latest"],
+                id: 1
+            })
+        });
+
+        if (!res.ok) {
+            return false;
+        }
+
+        const data = await res.json();
+        const bytecode = data.result;
+        const signatures = [
+            "0x70a08231", // balanceOf
+            "0x18160ddd", // totalSupply
+            "0xdd62ed3e", // allowance
+
+            "0xa9059cbb", // transfer
+            "0x23b872dd", // transferFrom
+            "0x095ea7b3", // approve
+        ];
+
+        return signatures.every(sig => bytecode.includes(sig.slice(2)));
+    } catch (error) {
+        return false;
+    }
+}
 
 export async function isKip37(contractAddress: string) {
     try {
@@ -54,10 +91,4 @@ export async function isErc721(contractAddress: string) {
     } catch (err) {
         return false;
     }
-}
-
-module.exports = {
-    isErc1155,
-    isErc721,
-    isKip37
 }

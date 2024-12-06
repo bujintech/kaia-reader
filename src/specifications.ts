@@ -1,3 +1,19 @@
+export enum TokenType {
+    ERC20 = "ERC20",
+    KIP37 = "KIP37",
+    ERC721 = "ERC721",
+    ERC1155 = "ERC1155",
+    UNKNOWN = "UNKNOWN",
+}
+
+/**
+ * ```
+ * Transfer (index_topic_1 address from, index_topic_2 address to, uint256 value)
+ * ```
+ */
+export const ERC20_LOG_TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+
+export const ERC20_METHOD_BALANCE_OF = '0x70a08231';
 // NFT 标准: KIP17(ERC-721), ERC-1155
 
 /**
@@ -118,5 +134,102 @@ export const Erc1155Abi = [
         ],
         stateMutability: "view",
         type: "function"
+    },
+]
+
+export const Erc20Abi = [
+    {
+        inputs: [],
+        name: "name",
+        outputs: [
+            {
+                internalType: "string",
+                name: "",
+                type: "string"
+            }
+        ],
+        stateMutability: "view",
+        type: "function"
+    },
+    {
+        "inputs": [],
+        name: "symbol",
+        outputs: [
+            {
+                internalType: "string",
+                name: "",
+                type: "string"
+            }
+        ],
+        stateMutability: "view",
+        type: "function"
+    },
+    {
+        "inputs": [],
+        name: "decimals",
+        outputs: [
+            {
+                internalType: "uint8",
+                name: "",
+                type: "uint8"
+            }
+        ],
+        stateMutability: "view",
+        type: "function"
+    },
+    {
+        "inputs": [],
+        "name": "totalSupply",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                name: "",
+                type: "uint256"
+            }
+        ],
+        stateMutability: "view",
+        type: "function"
+    },
+    {
+        "constant": true,
+        "inputs": [
+            {
+                "name": "_owner",
+                "type": "address"
+            }
+        ],
+        "name": "balanceOf",
+        "outputs": [
+            {
+                "name": "balance",
+                "type": "uint256"
+            }
+        ],
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [
+            {
+                "name": "_owner",
+                "type": "address"
+            },
+            {
+                "name": "_spender",
+                "type": "address"
+            }
+        ],
+        "name": "allowance",
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
     },
 ]

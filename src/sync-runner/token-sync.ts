@@ -2,7 +2,6 @@ import path from "path";
 import { writeSingle } from "../utils/db";
 import { getTokenInfo } from "../utils/token";
 import { TokenInfo } from "../utils/token";
-import { TokenType } from "./transfers-sync";
 import { createObjectCsvWriter } from "csv-writer";
 import chalk from "chalk";
 
@@ -22,27 +21,26 @@ const csvWriter = createObjectCsvWriter({
 
 interface TokenInfoCache {
     cacheTime: number;
-    tokenInfo: TokenInfo
+    tokenInfoPromise: Promise<TokenInfo | null>
 }
 
 const tokenInfoMap = new Map<string, TokenInfoCache>();
 
-export async function saveTokenInfo(contractAddress: string, tokenType?: TokenType) {
+export async function saveTokenInfo(contractAddress: string): Promise<TokenInfo | null> {
     let tokenInfo: TokenInfo | null = null;
     let useCache = false;
     if (tokenInfoMap.has(contractAddress) && Date.now() - tokenInfoMap.get(contractAddress)!!.cacheTime < 3600000) {
         const cache = tokenInfoMap.get(contractAddress)!!;
-        tokenInfo = cache.tokenInfo;
+        tokenInfo = await cache.tokenInfoPromise;
         // console.log(chalk.blueBright("Using cache for"), chalk.yellowBright(contractAddress), chalk.blueBright('type:'), chalk.magentaBright(tokenInfo.tokenType));
         useCache = true;
     } else {
-        tokenInfo = await getTokenInfo(contractAddress, tokenType);
-        if (tokenInfo) {
-            tokenInfoMap.set(contractAddress, {
-                cacheTime: Date.now(),
-                tokenInfo,
-            });
-        }
+        const tokenInfoPromise = getTokenInfo(contractAddress);
+        tokenInfoMap.set(contractAddress, {
+            cacheTime: Date.now(),
+            tokenInfoPromise: tokenInfoPromise,
+        });
+        tokenInfo = await tokenInfoPromise;
     }
     if (!useCache && tokenInfo) {
         // csvWriter.writeRecords([tokenInfo]);

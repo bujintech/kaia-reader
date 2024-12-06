@@ -1,14 +1,11 @@
-import { Contract, JsonRpcProvider } from "ethers";
-import { Erc20Abi, isErc20 } from "../specifications/erc20";
 import chalk from "chalk";
-import { TokenType } from "../sync-runner/transfers-sync";
-import { Erc721Abi } from "../specifications/nft";
-import { isKip37 } from "../contract";
-import { isErc1155, isErc721 } from "../contract";
+import { Contract, JsonRpcProvider } from "ethers";
+import { TokenType, Erc20Abi, Erc721Abi } from "../specifications";
+import { isErc20, isKip37, isErc1155, isErc721 } from "./contract";
 import { BASE_NODE_RPC } from '../configs';
 
 const provider = new JsonRpcProvider(BASE_NODE_RPC);
-const tokenTypeCache = new Map<string, TokenType>();
+const tokenTypeCache = new Map<string, Promise<TokenType>>();
 export interface TokenInfo {
     contractAddress: string;
     timestamp: number;
@@ -24,10 +21,7 @@ export async function getBlockTimestamp(blockNumber: number) {
     return block?.timestamp ?? 0;
 }
 
-export async function getTokenType(contractAddress: string): Promise<TokenType> {
-    if (tokenTypeCache.has(contractAddress)) {
-        return tokenTypeCache.get(contractAddress)!!;
-    }
+const tokenTypeGetter = async (contractAddress: string): Promise<TokenType> => {
     let tokenType = await isKip37(contractAddress) ? TokenType.KIP37 : // KIP37基于ERC1155
         await isErc1155(contractAddress) ? TokenType.ERC1155 :
             await isErc721(contractAddress) ? TokenType.ERC721 :
@@ -51,15 +45,22 @@ export async function getTokenType(contractAddress: string): Promise<TokenType> 
             tokenType = TokenType.UNKNOWN;
         }
     }
-    tokenTypeCache.set(contractAddress, tokenType);
     return tokenType;
 }
 
-export async function getTokenInfo(contractAddress: string, tokenType?: TokenType): Promise<TokenInfo | null> {
+export async function getTokenType(contractAddress: string): Promise<TokenType> {
+    if (tokenTypeCache.has(contractAddress)) {
+        return await tokenTypeCache.get(contractAddress)!!;
+    }
+
+    const getter = tokenTypeGetter(contractAddress);
+    tokenTypeCache.set(contractAddress, getter);
+    return getter;
+}
+
+export async function getTokenInfo(contractAddress: string): Promise<TokenInfo | null> {
     try {
-        if (!tokenType) {
-            tokenType = await getTokenType(contractAddress);
-        }
+        const tokenType = await getTokenType(contractAddress);
         // console.log(chalk.blueBright("Getting token info for"), chalk.yellowBright(contractAddress),
         //     chalk.blueBright('type:'), chalk.magenta(tokenType));
         if (tokenType === TokenType.ERC20) {
