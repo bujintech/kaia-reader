@@ -1,7 +1,7 @@
 import { BASE_NODE_RPC } from "../configs";
 import { TransferTopics, ERC20_LOG_TRANSFER, TokenType } from "../specifications";
 import { getBlockTimestamp, getTokenType } from "../utils/token";
-import { writeBatch } from "../utils/db";
+import { compressData, writeBatch } from "../utils/db";
 import { gzipSync } from 'zlib';
 import chalk from "chalk";
 import { saveTokenInfo } from "./token-sync";
@@ -304,9 +304,7 @@ async function saveTransferLogs(logs: TokenTransferLog[]) {
                     GS3SK: sk,
                     GS4PK: x.contractAddress,
                     GS4SK: sk,
-                    RESULT: gzipSync(JSON.stringify(x, (_, v) =>
-                        typeof v === "bigint" ? v.toString() : v,
-                    )),
+                    RESULT: compressData(x),
                     CHAIN: 'KAIA',
                     METHOD: TransferTopics[x.topic as unknown as keyof typeof TransferTopics],
                     TIMESTAMP: x.timestamp,
@@ -330,9 +328,7 @@ async function saveTransferLogs(logs: TokenTransferLog[]) {
                     GS3SK: sk,
                     GS4PK: x.contractAddress,
                     GS4SK: sk,
-                    RESULT: gzipSync(JSON.stringify(x, (_, v) =>
-                        typeof v === "bigint" ? v.toString() : v,
-                    )),
+                    RESULT: compressData(x),
                     CHAIN: 'KAIA',
                     METHOD: TransferTopics[x.topic as unknown as keyof typeof TransferTopics],
                     TIMESTAMP: x.timestamp,

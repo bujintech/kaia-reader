@@ -1,6 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, BatchWriteCommand, GetCommand, PutCommand, GetCommandInput, GetCommandOutput } from "@aws-sdk/lib-dynamodb";
 import chalk from "chalk";
+import { gzipSync } from "zlib";
 
 const { TABLE_NAME, DB_REGION, ACCESS_KEY_ID, SSECRET_ACCESS_KEY } = process.env;
 
@@ -76,4 +77,8 @@ export async function getDbLastBlock() {
     });
 
     return (await docClient.send(command)).Item?.RESULT;
+}
+
+export function compressData(data: any) {
+    return gzipSync(JSON.stringify(data, (_, v) => typeof v === "bigint" ? v.toString() : v));
 }

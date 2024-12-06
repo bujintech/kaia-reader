@@ -34,11 +34,6 @@ getLatestBlock()
                 chalk.blueBright("ms"));
             console.log();
             currentBlock++;
-            if (slow) {
-                syncInterval -= Math.max(0, syncInterval - 50)
-            } else {
-                syncInterval += Math.min(1000, syncInterval + 50)
-            }
-            await new Promise(resolve => setTimeout(resolve, syncInterval));
+            await new Promise(resolve => setTimeout(resolve, 50));
         }
     })
