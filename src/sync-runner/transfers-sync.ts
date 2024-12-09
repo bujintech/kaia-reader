@@ -364,14 +364,24 @@ export async function saveTransferLogsByNumber(blockNumber: number, options: { s
         }
 
         const chunkSize = 25;
-        let chunkIndex = 1;
+        const chunks = [];
         for (let i = 0; i < logs.length; i += chunkSize) {
-            console.log("Writing transfer logs to DB, block:", [...new Set(logs.map(x => x.blockNumber))], "Chunk", `${chunkIndex++}/${Math.ceil(logs.length / chunkSize)}`, "...");
-            const startTime = Date.now();
-            await saveTransferLogs(logs.slice(i, i + chunkSize));
-            const timeCost = Date.now() - startTime;
-            console.log(chalk.green("Finished saving transfer logs... DB time cost:"), chalk.yellowBright(timeCost), chalk.green("ms"));
+            chunks.push(logs.slice(i, i + chunkSize));
         }
+
+        console.log("Writing transfer logs to DB, block:", [...new Set(logs.map(x => x.blockNumber))], "Total chunks:", chunks.length);
+        const dbStartTime = Date.now();
+
+        await Promise.all(chunks.map(async (chunk, index) => {
+            const chunkStartTime = Date.now();
+            await saveTransferLogs(chunk);
+            const chunkTimeCost = Date.now() - chunkStartTime;
+            console.log(chalk.green(`Finished chunk ${index + 1}/${chunks.length}... Time cost:`), chalk.yellowBright(chunkTimeCost), chalk.green("ms"));
+        }));
+
+        const dbTimeCost = Date.now() - dbStartTime;
+        console.log(chalk.green("Finished saving all transfer logs... Total DB time cost:"), chalk.yellowBright(dbTimeCost), chalk.green("ms"));
+
         console.log(`Saved ${logs.length} transfer logs for block number: ${blockNumber}`);
         console.log("Latest block time:", chalk.magentaBright(logs[0] && new Date(logs[0].timestamp * 1000).toLocaleString("zh-CN")));
         console.log("Log time:", chalk.magentaBright(new Date().toLocaleString("zh-CN")));
