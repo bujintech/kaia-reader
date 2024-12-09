@@ -51,20 +51,28 @@ export async function writeBatch(data: any[]) {
 }
 
 export async function setDbLastBlock(blockNumber: number) {
-    const command = new PutCommand({
-        TableName: TABLE_NAME,
-        Item: {
-            PK: 'MAX_BLOCK',
-            SK: 'MAX_BLOCK',
-            RESULT: blockNumber,
-            CHAIN: 'KAIA',
-        },
-    });
+    while (true) {
+        try {
+            const command = new PutCommand({
+                TableName: TABLE_NAME,
+                Item: {
+                    PK: 'MAX_BLOCK',
+                    SK: 'MAX_BLOCK',
+                    RESULT: blockNumber,
+                    CHAIN: 'KAIA',
+                },
+            });
 
-    const startTime = Date.now();
-    await docClient.send(command);
-    const timeCost = Date.now() - startTime;
-    console.log(chalk.blueBright("Setting db last block... Time cost:"), chalk.yellowBright(timeCost), chalk.blueBright("ms"));
+            const startTime = Date.now();
+            await docClient.send(command);
+            const timeCost = Date.now() - startTime;
+            console.log(chalk.blueBright("Setting db last block... Time cost:"), chalk.yellowBright(timeCost), chalk.blueBright("ms"));
+            break;
+        } catch (e) {
+            console.log(chalk.redBright("Error setting db last block:"), e);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
 }
 
 export async function getDbLastBlock() {
