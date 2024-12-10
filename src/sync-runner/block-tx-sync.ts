@@ -51,15 +51,22 @@ export async function saveBlockByNumber(blockNumber: number) {
     const fullData = [blockItem, ...transactionItems];
 
     const chunkSize = 25;
-    let chunkIndex = 1;
+    const chunks = [];
+
     for (let i = 0; i < fullData.length; i += chunkSize) {
-        const savingData = fullData.slice(i, i + chunkSize);
-        try {
-            await writeBatch(savingData);
-        } catch (error) {
-            console.log(chalk.redBright("Error writing block: "), blockNumber, "Chunk: ", chunkIndex);
-            console.log(savingData);
-            throw error;
-        }
+        chunks.push(fullData.slice(i, i + chunkSize));
     }
+
+    await Promise.all(chunks.map(async (chunk, index) => {
+        while (true) {
+            try {
+                await writeBatch(chunk);
+                break;
+            } catch (error) {
+                console.log(chalk.redBright("Error writing block: "), blockNumber, "Chunk: ", index);
+                console.log(chunk);
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+        }
+    }));
 }

@@ -3,6 +3,8 @@ import { Contract, JsonRpcProvider } from "ethers";
 import { TokenType, Erc20Abi, Erc721Abi } from "../specifications";
 import { isErc20, isKip37, isErc1155, isErc721 } from "./contract";
 import { BASE_NODE_RPC } from '../configs';
+import path from "path";
+import fs from "fs";
 
 const provider = new JsonRpcProvider(BASE_NODE_RPC);
 const tokenTypeCache = new Map<string, Promise<TokenType>>();
@@ -42,6 +44,7 @@ const tokenTypeGetter = async (contractAddress: string): Promise<TokenType> => {
         } catch (err) {
             console.error(chalk.redBright("Error getting token type for"), chalk.yellowBright(contractAddress), chalk.blueBright('method:'), callingMethod);
             console.error(err);
+            fs.appendFileSync(path.join(process.cwd(), 'logs', 'token-type-error.txt'), `${contractAddress}\n${err}\n`);
             tokenType = TokenType.UNKNOWN;
         }
     }
