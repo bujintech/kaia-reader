@@ -13,7 +13,6 @@ getLatestBlock()
         const dbLastBlock = await getDbLastBlock();
 
         let currentBlock = Math.max(startBlock, dbLastBlock + 1);
-        let syncInterval = 100;
 
         console.log(chalk.magentaBright("Start reading from block: "), currentBlock);
 

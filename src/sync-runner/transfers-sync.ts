@@ -2,10 +2,8 @@ import { BASE_NODE_RPC } from "../configs";
 import { TransferTopics, ERC20_LOG_TRANSFER, TokenType } from "../specifications";
 import { getBlockTimestamp, getTokenType } from "../utils/token";
 import { compressData, writeBatch } from "../utils/db";
-import { gzipSync } from 'zlib';
 import chalk from "chalk";
 import { saveTokenInfo } from "./token-sync";
-import { NumberValue } from "@aws-sdk/lib-dynamodb";
 import { parseBigInt } from "../utils/number-utils";
 
 export enum TransferType {
@@ -310,9 +308,9 @@ async function saveTransferLogs(logs: TokenTransferLog[]) {
                     TIMESTAMP: x.timestamp,
                     NAME: x.tokenName,
                     TYPE: x.tokenType,
-                    AMOUNT: x.amount,
+                    AMOUNT: x.amount?.toLocaleString('fullwide', { useGrouping: false }),
                     TOKEN_ADDRESS: x.contractAddress,
-                    NFTID: x.tokenId ? NumberValue.from(x.tokenId.toLocaleString('fullwide', { useGrouping: false })) : undefined,
+                    NFTID: x.tokenId?.toLocaleString('fullwide', { useGrouping: false }),
                 }
             }
             default: {
@@ -334,7 +332,7 @@ async function saveTransferLogs(logs: TokenTransferLog[]) {
                     TIMESTAMP: x.timestamp,
                     NAME: x.tokenName,
                     TYPE: x.tokenType,
-                    AMOUNT: x.amount,
+                    AMOUNT: x.amount?.toLocaleString('fullwide', { useGrouping: false }),
                     TOKEN_ADDRESS: x.contractAddress,
                     NFTID: x.tokenId?.toLocaleString('fullwide', { useGrouping: false }),
                 }
@@ -383,7 +381,7 @@ export async function saveTransferLogsByNumber(blockNumber: number, options: { s
         console.log(chalk.green("Finished saving all transfer logs... Total DB time cost:"), chalk.yellowBright(dbTimeCost), chalk.green("ms"));
 
         console.log(`Saved ${logs.length} transfer logs for block number: ${blockNumber}`);
-        console.log("Latest block time:", chalk.magentaBright(logs[0] && new Date(logs[0].timestamp * 1000).toLocaleString("zh-CN")));
+        console.log("Block time:", chalk.magentaBright(logs[0] && new Date(logs[0].timestamp * 1000).toLocaleString("zh-CN")));
         console.log("Log time:", chalk.magentaBright(new Date().toLocaleString("zh-CN")));
         const timeDiff = (new Date().getTime() - logs[0].timestamp * 1000) / 1000;
         const slow = timeDiff > lastTimeDiff;

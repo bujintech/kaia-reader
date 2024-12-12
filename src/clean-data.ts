@@ -1,9 +1,6 @@
-import { BatchWriteItemCommand, DeleteItemCommand, DeleteItemCommandInput, DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
+import { DeleteItemCommand, DeleteItemCommandInput, DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
 import { ACCESS_KEY_ID, DB_REGION, SSECRET_ACCESS_KEY, TABLE_NAME } from "./utils/db";
-import { DeleteCommand, DynamoDBDocumentClient, QueryCommandInput } from "@aws-sdk/lib-dynamodb";
-const startBlock = 171465182;
-
-let currentBlock = startBlock;
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 
 if (!TABLE_NAME || !DB_REGION || !ACCESS_KEY_ID || !SSECRET_ACCESS_KEY) {
     throw new Error("Missing environment variables");
@@ -128,7 +125,7 @@ async function deleteRecords(fromBlockNumber: number) {
 async function executeDynamoDBDeletionWithPartitionList() {
     let totalDeletedRecords = 0;
     try {
-        totalDeletedRecords = await deleteRecords(171465182);
+        totalDeletedRecords = await deleteRecords(168277577);
     } catch (error) {
         console.error(tableName + '-dynamodb -- An error occurred: ' + error);
     }

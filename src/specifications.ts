@@ -68,168 +68,21 @@ export enum TransferTopics {
 }
 
 export const Erc721Abi = [
-
-    {
-        inputs: [],
-        name: "symbol",
-        outputs: [
-            {
-                internalType: "string",
-                name: "",
-                type: "string"
-            }
-        ],
-        stateMutability: "view",
-        type: "function"
-    },
-    {
-        inputs: [],
-        name: "name",
-        outputs: [
-            {
-                internalType: "string",
-                name: "",
-                type: "string"
-            }
-        ],
-        stateMutability: "view",
-        type: "function"
-    },
-    {
-        inputs: [],
-        name: "totalSupply",
-        outputs: [
-            {
-                internalType: "uint256",
-                name: "",
-                type: "uint256"
-            }
-        ],
-        stateMutability: "view",
-        type: "function"
-    },
+    "function balanceOf(address account) external view returns (uint256)",
+    "function symbol() external view returns (string)",
+    "function name() external view returns (string)",
+    "function totalSupply() external view returns (uint256)",
 ]
 
 export const Erc1155Abi = [
-    {
-        name: "balanceOf",
-        inputs: [
-            {
-                internalType: "address",
-                name: "account",
-                type: "address"
-            },
-            {
-                internalType: "uint256",
-                name: "id",
-                type: "uint256"
-            }
-        ],
-        outputs: [
-            {
-                internalType: "uint256",
-                name: "",
-                type: "uint256"
-            }
-        ],
-        stateMutability: "view",
-        type: "function"
-    },
+    "function balanceOf(address account, uint256 id) external view returns (uint256)"
 ]
 
 export const Erc20Abi = [
-    {
-        inputs: [],
-        name: "name",
-        outputs: [
-            {
-                internalType: "string",
-                name: "",
-                type: "string"
-            }
-        ],
-        stateMutability: "view",
-        type: "function"
-    },
-    {
-        "inputs": [],
-        name: "symbol",
-        outputs: [
-            {
-                internalType: "string",
-                name: "",
-                type: "string"
-            }
-        ],
-        stateMutability: "view",
-        type: "function"
-    },
-    {
-        "inputs": [],
-        name: "decimals",
-        outputs: [
-            {
-                internalType: "uint8",
-                name: "",
-                type: "uint8"
-            }
-        ],
-        stateMutability: "view",
-        type: "function"
-    },
-    {
-        "inputs": [],
-        "name": "totalSupply",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                name: "",
-                type: "uint256"
-            }
-        ],
-        stateMutability: "view",
-        type: "function"
-    },
-    {
-        "constant": true,
-        "inputs": [
-            {
-                "name": "_owner",
-                "type": "address"
-            }
-        ],
-        "name": "balanceOf",
-        "outputs": [
-            {
-                "name": "balance",
-                "type": "uint256"
-            }
-        ],
-        "payable": false,
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "constant": true,
-        "inputs": [
-            {
-                "name": "_owner",
-                "type": "address"
-            },
-            {
-                "name": "_spender",
-                "type": "address"
-            }
-        ],
-        "name": "allowance",
-        "outputs": [
-            {
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "payable": false,
-        "stateMutability": "view",
-        "type": "function"
-    },
+    "function name() external view returns (string)",
+    "function symbol() external view returns (string)",
+    "function decimals() external view returns (uint8)",
+    "function totalSupply() external view returns (uint256)",
+    "function balanceOf(address account) external view returns (uint256)",
+    "function allowance(address owner, address spender) external view returns (uint256)",
 ]

@@ -44,7 +44,7 @@ const tokenTypeGetter = async (contractAddress: string): Promise<TokenType> => {
         } catch (err) {
             console.error(chalk.redBright("Error getting token type for"), chalk.yellowBright(contractAddress), chalk.blueBright('method:'), callingMethod);
             console.error(err);
-            fs.appendFileSync(path.join(process.cwd(), 'logs', 'token-type-error.txt'), `${contractAddress}\n${err}\n`);
+            fs.appendFileSync(path.join(process.cwd(), 'logs', 'token-type-error.log'), `${contractAddress}\n${err}\n`);
             tokenType = TokenType.UNKNOWN;
         }
     }
