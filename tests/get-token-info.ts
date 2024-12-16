@@ -2,7 +2,7 @@ import { Contract } from "ethers";
 import { isErc1155, isErc721, isKip37, provider } from "../src/utils/contract";
 import { Erc20Abi } from "../src/specifications";
 
-const contractAddress = '';
+const contractAddress = '0xa505ee303d5ab53afc392a06f08758fc83a07209';
 
 (async () => {
     console.log("ERC721", await isErc721(contractAddress));

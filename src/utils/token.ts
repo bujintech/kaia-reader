@@ -38,7 +38,7 @@ const tokenTypeGetter = async (contractAddress: string): Promise<TokenType> => {
                 contract.name(),
                 contract.symbol(),
                 contract.decimals(),
-                contract.balanceOf("0x616f29226c9a1502825f9b3d3ce3544df9c1c762")
+                contract.balanceOf("0x0000000000000000000000000000000000000000")
             ]);
             tokenType = TokenType.ERC20;
         } catch (err) {

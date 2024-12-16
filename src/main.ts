@@ -1,9 +1,10 @@
 import { saveTransferLogsByNumber } from './sync-runner/transfers-sync';
 import { getDbLastBlock, setDbLastBlock } from './utils/db';
-import chalk from 'chalk';
 import { saveBlockByNumber } from './sync-runner/block-tx-sync';
 import { getLatestBlock } from './utils/block';
 import { START_BLOCK } from './configs';
+import chalk from 'chalk';
+import { saveKaiaPrice } from './sync-runner/miscellaneous-sync';
 
 getLatestBlock()
     .then(async (n) => {
@@ -25,6 +26,8 @@ getLatestBlock()
             const { slow } = await saveTransferLogsByNumber(currentBlock, { showLog: false });
             // Update latest updated block number
             await setDbLastBlock(currentBlock);
+            // Save kaia price
+            await saveKaiaPrice();
             const timeCost = Date.now() - startTime;
             console.log(chalk.blueBright("Finished saving block"),
                 currentBlock,

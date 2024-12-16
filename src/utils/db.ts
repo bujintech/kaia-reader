@@ -90,3 +90,28 @@ export async function getDbLastBlock() {
 export function compressData(data: any) {
     return gzipSync(JSON.stringify(data, (_, v) => typeof v === "bigint" ? v.toString() : v));
 }
+
+export async function setDbKaiaPrice(price: number) {
+    while (true) {
+        try {
+            const command = new PutCommand({
+                TableName: TABLE_NAME,
+                Item: {
+                    PK: 'KAIA_PRICE',
+                    SK: 'KAIA_PRICE',
+                    RESULT: price,
+                    CHAIN: 'KAIA',
+                },
+            });
+
+            const startTime = Date.now();
+            await docClient.send(command);
+            const timeCost = Date.now() - startTime;
+            console.log(chalk.blueBright("Setting kaia price... Time cost:"), chalk.yellowBright(timeCost), chalk.blueBright("ms"));
+            break;
+        } catch (e) {
+            console.log(chalk.redBright("Error setting kaia price:"), e);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+}
