@@ -17,7 +17,7 @@ const client = new DynamoDBClient({
     },
 });
 
-const docClient = DynamoDBDocumentClient.from(client);
+export const docClient = DynamoDBDocumentClient.from(client);
 
 export async function writeSingle(data: any) {
     const command = new PutCommand({
@@ -91,7 +91,7 @@ export function compressData(data: any) {
     return gzipSync(JSON.stringify(data, (_, v) => typeof v === "bigint" ? v.toString() : v));
 }
 
-export async function setDbKaiaPrice(price: number) {
+export async function setDbKaiaPrice(price: number, volume: number, marketCap: number, circulatingSupply: number) {
     while (true) {
         try {
             const command = new PutCommand({
@@ -101,6 +101,9 @@ export async function setDbKaiaPrice(price: number) {
                     SK: 'KAIA_PRICE',
                     RESULT: price,
                     CHAIN: 'KAIA',
+                    VOLUME: volume,
+                    MARKET_CAP: marketCap,
+                    CIRCULATING_SUPPLY: circulatingSupply,
                 },
             });
 

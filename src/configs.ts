@@ -3,12 +3,15 @@ config();
 
 export const BASE_NODE_RPC = process.env.BASE_NODE_RPC;
 
-export const START_BLOCK = process.env.START_BLOCK;
+export const START_BLOCK = parseInt(process.env.START_BLOCK ?? "0");
 
-export const PRICE_INTERVAL = process.env.PRICE_INTERVAL;
+export const PRICE_INTERVAL = parseInt(process.env.PRICE_INTERVAL ?? "25000");
+
+export const CMC_API_KEY = process.env.CMC_API_KEY ?? "";
 
 export default {
     BASE_NODE_RPC,
     START_BLOCK,
     PRICE_INTERVAL,
+    CMC_API_KEY,
 }

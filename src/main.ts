@@ -10,12 +10,13 @@ getLatestBlock()
     .then(async (n) => {
         console.log(chalk.magentaBright("Latest block: "), n);
 
-        const startBlock = parseInt(START_BLOCK) ?? n;
+        const startBlock = START_BLOCK ?? n;
         const dbLastBlock = await getDbLastBlock();
 
         let currentBlock = Math.max(startBlock, dbLastBlock + 1);
 
         console.log(chalk.magentaBright("Start reading from block: "), currentBlock);
+        console.log(chalk.magentaBright("Price upadte time: "), currentBlock);
 
         while (true) {
             const startTime = Date.now();
