@@ -5,6 +5,7 @@ import { getLatestBlock } from './utils/block';
 import { START_BLOCK } from './configs';
 import chalk from 'chalk';
 import { saveKaiaPrice } from './sync-runner/miscellaneous-sync';
+import { saveGcInfo } from './sync-runner/gc-sync';
 
 getLatestBlock()
     .then(async (n) => {
@@ -35,6 +36,7 @@ getLatestBlock()
                 chalk.blueBright("Time cost:"),
                 timeCost > 1000 ? chalk.redBright(timeCost) : chalk.greenBright(timeCost),
                 chalk.blueBright("ms"));
+            await saveGcInfo();
             console.log();
             currentBlock++;
             await new Promise(resolve => setTimeout(resolve, 50));

@@ -1,6 +1,5 @@
 import chalk from "chalk";
 import { BASE_NODE_RPC } from "../configs";
-import { gzipSync } from "zlib";
 import { JsonRpcProvider } from "ethers";
 import { compressData } from "./db";
 

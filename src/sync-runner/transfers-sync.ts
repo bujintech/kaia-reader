@@ -5,6 +5,8 @@ import { compressData, writeBatch } from "../utils/db";
 import chalk from "chalk";
 import { saveTokenInfo } from "./token-sync";
 import { parseBigInt } from "../utils/number-utils";
+import { chunk, trimStart } from "lodash";
+import { parseLogData } from "../utils/transaction-utils";
 
 export enum TransferType {
     Transfer = "Transfer",
@@ -30,7 +32,7 @@ export interface TokenTransferLog {
     tokenName?: string;
 }
 
-interface BlockLog {
+interface RawLog {
     address: string;
     topics: string[];
     data: string;
@@ -114,7 +116,7 @@ async function getTransferLogs(fromBlockNumber: number, {
         }
     }).flat();
 
-    const allLogs: BlockLog[] = [];
+    const rawLogs: RawLog[] = [];
 
     while (true) {
         const res = await fetch(BASE_NODE_RPC, {
@@ -133,9 +135,9 @@ async function getTransferLogs(fromBlockNumber: number, {
                 }]
             })
         });
-        const data = await res.json() as { result?: BlockLog[], error?: any };
+        const data = await res.json() as { result?: RawLog[], error?: any };
         if (data.result) {
-            allLogs.push(...(data.result || []));
+            rawLogs.push(...(data.result || []));
             break;
         } else if (data.error.code !== -32000) {
             console.error(chalk.redBright("RPC Error: "), data.error);
@@ -149,7 +151,7 @@ async function getTransferLogs(fromBlockNumber: number, {
     let counterTransferBatch = 0;
     let counterTransferSingle = 0;
 
-    const resultData = await Promise.all(allLogs.map(async log => {
+    const resultData = await Promise.all(rawLogs.map(async log => {
         const blockNumber = parseInt(log.blockNumber);
         const timestamp = await getBlockTimestamp(blockNumber);
         const tokenType = await getTokenType(log.address);
@@ -158,7 +160,7 @@ async function getTransferLogs(fromBlockNumber: number, {
             console.log(chalk.redBright("Unknown token type: "), log.address);
         }
         const tokenInfo = await saveTokenInfo(log.address);
-        let data: {
+        let transfers: {
             paramIndex: number,
             from: string,
             to: string,
@@ -174,7 +176,7 @@ async function getTransferLogs(fromBlockNumber: number, {
                 if (log.topics.length == 4) {
                     // event Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId);
                     const [, from, to, tokenId] = log.topics;
-                    data.push({
+                    transfers.push({
                         paramIndex: 0,
                         from,
                         to,
@@ -183,11 +185,11 @@ async function getTransferLogs(fromBlockNumber: number, {
                         tokenId: BigInt(tokenId),
                         tokenName: tokenInfo?.name
                     });
-                } else {
+                } else if (log.topics.length === 3) {
                     // event Transfer(address indexed _from, address indexed _to, uint256 _value)
                     const [, from, to] = log.topics;
                     const amount = log.data === '0x' ? 1n : parseBigInt(log.data);
-                    data.push({
+                    transfers.push({
                         paramIndex: 0,
                         from,
                         to,
@@ -195,6 +197,16 @@ async function getTransferLogs(fromBlockNumber: number, {
                         topic: TransferTopics.Transfer,
                         tokenName: tokenInfo?.name
                     });
+                } else if (log.topics.length === 1) {
+                    const [from, to, amountStr] = parseLogData(log.data);
+                    transfers.push({
+                        paramIndex: 0,
+                        from: `0x${from}`,
+                        to: `0x${to}`,
+                        amount: parseBigInt(amountStr),
+                        topic: TransferTopics.Transfer,
+                        tokenName: tokenInfo?.name
+                    })
                 }
                 break;
             }
@@ -203,7 +215,7 @@ async function getTransferLogs(fromBlockNumber: number, {
                 const [, , from, to] = log.topics;
                 const tokenId = parseBigInt(log.data.substring(2, 66));
                 const amount = parseBigInt(log.data.substring(66));
-                data.push({
+                transfers.push({
                     paramIndex: 0,
                     tokenId,
                     amount,
@@ -218,7 +230,7 @@ async function getTransferLogs(fromBlockNumber: number, {
                 counterTransferBatch++;
                 const [, , from, to] = log.topics;
                 const batchData = await parseTransferBatchData(log.data);
-                data.push(...batchData.map(x => ({
+                transfers.push(...batchData.map(x => ({
                     ...x,
                     from,
                     to,
@@ -228,12 +240,12 @@ async function getTransferLogs(fromBlockNumber: number, {
                 break;
             }
             default:
-                throw new Error("Unsupported topic");
+                throw new Error("[Unreachable] Unsupported topic");
         }
 
         // const contractAddress = log.address;
 
-        return data.map((x): TokenTransferLog => ({
+        return transfers.map((x): TokenTransferLog => ({
             blockNumber: parseInt(log.blockNumber),
             txIndex: parseInt(log.transactionIndex),
             logIndex: parseInt(log.logIndex, 16),
@@ -246,38 +258,38 @@ async function getTransferLogs(fromBlockNumber: number, {
         }))
     }))
 
-    const realData = resultData.flat();
-    console.log(chalk.cyanBright("Total:"), realData.length);
+    const flatenData = resultData.flat();
+    console.log(chalk.cyanBright("Total transfer logs:"), flatenData.length);
 
-    const transferLogs = realData.filter(x => x.transferType === TransferType.Transfer);
+    const transferLogs = flatenData.filter(x => x.transferType === TransferType.Transfer);
     if (transferLogs.length > 0) {
-        console.log(chalk.cyanBright("Transfer:"), transferLogs.length);
+        console.log(chalk.cyanBright("Transfer logs:"), transferLogs.length);
         if (logDetail) {
             transferLogs.forEach(logTransfer);
         }
     }
 
-    const transferBatchLogs = realData.filter(x => x.transferType === TransferType.TransferBatch);
+    const transferBatchLogs = flatenData.filter(x => x.transferType === TransferType.TransferBatch);
     if (transferBatchLogs.length > 0) {
-        console.log(chalk.cyanBright("TransferBatch:"), transferBatchLogs.length);
+        console.log(chalk.cyanBright("TransferBatch logs:"), transferBatchLogs.length);
         if (logDetail) {
             transferBatchLogs.forEach(logTransfer);
         }
     }
 
-    const transferSingleLogs = realData.filter(x => x.transferType === TransferType.TransferSingle);
+    const transferSingleLogs = flatenData.filter(x => x.transferType === TransferType.TransferSingle);
     if (transferSingleLogs.length > 0) {
-        console.log(chalk.cyanBright("TransferSingle:"), transferSingleLogs.length);
+        console.log(chalk.cyanBright("TransferSingle logs:"), transferSingleLogs.length);
         if (logDetail) {
             transferSingleLogs.forEach(logTransfer);
         }
     }
 
-    return realData;
+    return flatenData;
 }
 
 const logTransfer = (x: TokenTransferLog) => {
-    console.log(" ", chalk.greenBright(x.txHash));
+    console.log(` [${x.logIndex}]`, chalk.greenBright(x.txHash));
     console.log(" ", " ", chalk.gray(x.from), "=>", chalk.gray(x.to));
     console.log(" ", " ", "Contract:", chalk.gray(x.contractAddress));
     if (x.tokenId) {
@@ -361,11 +373,7 @@ export async function saveTransferLogsByNumber(blockNumber: number, options: { s
             return { slow: false };
         }
 
-        const chunkSize = 25;
-        const chunks = [];
-        for (let i = 0; i < logs.length; i += chunkSize) {
-            chunks.push(logs.slice(i, i + chunkSize));
-        }
+        const chunks = chunk(logs, 25);
 
         console.log("Writing transfer logs to DB, block:", [...new Set(logs.map(x => x.blockNumber))], "Total chunks:", chunks.length);
         const dbStartTime = Date.now();
